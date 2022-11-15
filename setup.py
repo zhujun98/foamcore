@@ -1,12 +1,3 @@
-"""
-Distributed under the terms of the BSD 3-Clause License.
-
-The full license is in the file LICENSE, distributed with this software.
-
-Author: Jun Zhu <jun.zhu@xfel.eu>
-Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
-All rights reserved.
-"""
 import os
 import os.path as osp
 import re
@@ -84,15 +75,9 @@ setup(
         'hiredis',
         'redis',
         'psutil',
+        'foamclient'
     ],
     extras_require={
-        'docs': [
-            'sphinx',
-            'nbsphinx',
-            'ipython',  # For nbsphinx syntax highlighting
-            'sphinx_rtd_theme',
-            'sphinxcontrib_github_alt'
-        ],
         'test': [
             'pytest',
             'pytest-cov',
@@ -109,6 +94,5 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Topic :: Scientific/Engineering :: Information Analysis',
-        'Topic :: Scientific/Engineering :: Physics',
     ]
 )
