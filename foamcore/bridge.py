@@ -5,6 +5,7 @@ The full license is in the file LICENSE, distributed with this software.
 
 Author: Jun Zhu
 """
+import json
 import time
 
 from foamclient import (
@@ -12,6 +13,39 @@ from foamclient import (
 )
 
 from .logger import logger
+
+
+raw_schema = {
+  "namespace": "debye",
+  "type": "record",
+  "name": "raw",
+  "fields": [
+    {
+      "name": "index",
+      "type": "long"
+    },
+    {
+      "name": "encoder",
+      "type": "record",
+      "logicalType": "ndarray",
+      "fields": [
+        {"name": "shape", "type": {"items": "int", "type": "array"}},
+        {"name": "typestr", "type": "string"},
+        {"name": "data", "type": "bytes"}
+      ]
+    },
+    {
+      "name": "samples",
+      "type": "record",
+      "logicalType": "ndarray",
+      "fields": [
+        {"name": "shape", "type": {"items": "int", "type": "array"}},
+        {"name": "typestr", "type": "string"},
+        {"name": "data", "type": "bytes"}
+      ]
+    }
+  ]
+}
 
 
 class FoamBridge:
@@ -45,13 +79,16 @@ class FoamBridge:
 
     def _update_schema(self, schema_registry, stream: str):
         while True:
-            schema = schema_registry.get(f"{self._domain}:schema", stream)
+            schema = schema_registry.get(stream)
             if schema is not None:
                 # TODO: validate schema
                 return schema
 
             time.sleep(1.0)
             logger.info(f"Schema for data stream '{stream}' not published")
+
+            # FIXME: schema should be set in the main GUI
+            schema_registry.set(stream, raw_schema)
 
     def _run(self) -> None:
         stream = f"{self._domain}:raw"
