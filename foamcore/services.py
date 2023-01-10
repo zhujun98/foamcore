@@ -225,7 +225,7 @@ def check_existing_redis_server(host: str, port: int, password: str):
 
 def application():
     parser = argparse.ArgumentParser(prog="foamcore")
-    parser.add_argument("domain", help="name of the beamline or instrument")
+    parser.add_argument("namespace", help="name of the beamline or instrument")
     parser.add_argument('-V', '--version',
                         action='version',
                         version="%(prog)s " + __version__)
@@ -265,7 +265,7 @@ def application():
 
     start_redis_server(redis_host, redis_port, password=REDIS_PASSWORD)
 
-    bridge = FoamBridge(args.domain,
+    bridge = FoamBridge(args.namespace,
                         zmq_endpoint=args.zmq_endpoint,
                         zmq_sock=args.zmq_sock,
                         redis_host=args.redis_host,

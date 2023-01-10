@@ -5,9 +5,6 @@ The full license is in the file LICENSE, distributed with this software.
 
 Author: Jun Zhu
 """
-import json
-import time
-
 from foamclient import (
     DeserializerType, RedisProducer, SerializerType, ZmqConsumer
 )
@@ -15,53 +12,20 @@ from foamclient import (
 from .logger import logger
 
 
-raw_schema = {
-  "namespace": "debye",
-  "type": "record",
-  "name": "raw",
-  "fields": [
-    {
-      "name": "index",
-      "type": "long"
-    },
-    {
-      "name": "encoder",
-      "type": "record",
-      "logicalType": "ndarray",
-      "fields": [
-        {"name": "shape", "type": {"items": "int", "type": "array"}},
-        {"name": "typestr", "type": "string"},
-        {"name": "data", "type": "bytes"}
-      ]
-    },
-    {
-      "name": "samples",
-      "type": "record",
-      "logicalType": "ndarray",
-      "fields": [
-        {"name": "shape", "type": {"items": "int", "type": "array"}},
-        {"name": "typestr", "type": "string"},
-        {"name": "data", "type": "bytes"}
-      ]
-    }
-  ]
-}
-
-
 class FoamBridge:
-    def __init__(self, domain, *,
+    def __init__(self, namespace, *,
                  zmq_endpoint: str, zmq_sock: str,
                  redis_host: str, redis_port: int, redis_password: str):
         """Initialization.
 
-        :param domain: domain name.
+        :param namespace: namespace name.
         :param zmq_endpoint: ZMQ endpoint.
         :param zmq_sock: ZMQ socket type.
         :param redis_host: Redis hostname.
         :param redis_port: Redis port number.
         :param redis_password: Redis password
         """
-        self._domain = domain
+        self._namespace = namespace
 
         self._zmq_endpoint = zmq_endpoint
         self._zmq_sock = zmq_sock
@@ -77,21 +41,8 @@ class FoamBridge:
         except KeyboardInterrupt:
             logger.info("Bridge terminated from the keyboard")
 
-    def _update_schema(self, schema_registry, stream: str):
-        while True:
-            schema = schema_registry.get(stream)
-            if schema is not None:
-                # TODO: validate schema
-                return schema
-
-            time.sleep(1.0)
-            logger.info(f"Schema for data stream '{stream}' not published")
-
-            # FIXME: schema should be set in the main GUI
-            schema_registry.set(stream, raw_schema)
-
     def _run(self) -> None:
-        stream = f"{self._domain}:raw"
+        stream = f"{self._namespace}:raw"
         with ZmqConsumer(self._zmq_endpoint,
                          deserializer=DeserializerType.SLS,
                          sock=self._zmq_sock,
@@ -100,16 +51,19 @@ class FoamBridge:
                                      serializer=SerializerType.SLS,
                                      password=self._redis_password)
 
-            schema = self._update_schema(producer.schema_registry, stream)
-
             while True:
                 try:
                     data = consumer.next()
+                except TimeoutError:
+                    continue
 
-                    # TODO: validation
+                # TODO: validation
 
-                    stream_id = producer.produce(stream, data, schema=schema)
+                try:
+                    stream_id = producer.produce(stream, data)
                     logger.info(f"Published new data to STREAM: "
                                 f"{stream}, {stream_id}")
                 except TimeoutError:
-                    ...
+                    continue
+                except RuntimeError as e:
+                    logger.info(str(e))
