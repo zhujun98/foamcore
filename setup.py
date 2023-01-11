@@ -75,7 +75,7 @@ setup(
         'hiredis',
         'redis',
         'psutil',
-        'foamclient'
+        'foamclient>=0.1.2'
     ],
     extras_require={
         'test': [
