@@ -1,0 +1,31 @@
+{
+  "namespace": "debye",
+  "type": "record",
+  "name": "raw",
+  "fields": [
+    {
+      "name": "index",
+      "type": "long"
+    },
+    {
+      "name": "encoder",
+      "type": "record",
+      "logicalType": "ndarray",
+      "fields": [
+        {"name": "shape", "type": {"items": "int", "type": "array"}},
+        {"name": "typestr", "type": "string"},
+        {"name": "data", "type": "bytes"}
+      ]
+    },
+    {
+      "name": "samples",
+      "type": "record",
+      "logicalType": "ndarray",
+      "fields": [
+        {"name": "shape", "type": {"items": "int", "type": "array"}},
+        {"name": "typestr", "type": "string"},
+        {"name": "data", "type": "bytes"}
+      ]
+    }
+  ]
+}
