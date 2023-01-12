@@ -13,19 +13,19 @@ from .logger import logger
 
 
 class FoamBridge:
-    def __init__(self, namespace, *,
+    def __init__(self, schema: dict, *,
                  zmq_endpoint: str, zmq_sock: str,
                  redis_host: str, redis_port: int, redis_password: str):
         """Initialization.
 
-        :param namespace: namespace name.
+        :param schema: schema of the raw data.
         :param zmq_endpoint: ZMQ endpoint.
         :param zmq_sock: ZMQ socket type.
         :param redis_host: Redis hostname.
         :param redis_port: Redis port number.
         :param redis_password: Redis password
         """
-        self._namespace = namespace
+        self._schema = schema
 
         self._zmq_endpoint = zmq_endpoint
         self._zmq_sock = zmq_sock
@@ -42,7 +42,7 @@ class FoamBridge:
             logger.info("Bridge terminated from the keyboard")
 
     def _run(self) -> None:
-        stream = f"{self._namespace}:raw"
+        stream = f"{self._schema['namespace']}:{self._schema['name']}"
         with ZmqConsumer(self._zmq_endpoint,
                          deserializer=DeserializerType.SLS,
                          sock=self._zmq_sock,
@@ -60,7 +60,7 @@ class FoamBridge:
                 # TODO: validation
 
                 try:
-                    stream_id = producer.produce(stream, data)
+                    stream_id = producer.produce(stream, data, self._schema)
                     logger.info(f"Published new data to STREAM: "
                                 f"{stream}, {stream_id}")
                 except TimeoutError:

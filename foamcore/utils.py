@@ -5,11 +5,12 @@ The full license is in the file LICENSE, distributed with this software.
 
 Author: Jun Zhu
 """
+import functools
+import json
+import multiprocessing as mp
 import os
 import psutil
 import socket
-import multiprocessing as mp
-import functools
 import subprocess
 from threading import Thread
 import time
@@ -219,3 +220,12 @@ def get_available_port(default_port):
                 break
 
     return port
+
+
+def load_schema(filepath: str):
+    """Load data schema from file."""
+    with open(filepath, "rb") as fp:
+        schema = json.load(fp)
+
+    # TODO: validate schema
+    return schema

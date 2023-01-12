@@ -7,7 +7,6 @@ Author: Jun Zhu
 """
 import argparse
 import faulthandler
-import datetime
 import os.path as osp
 import itertools
 import sys
@@ -22,7 +21,7 @@ from .bridge import FoamBridge
 from .logger import logger
 from .processes import register_foam_process
 from .redis_utils import init_redis_connection
-from .utils import check_system_resource, query_yes_no
+from .utils import check_system_resource, load_schema, query_yes_no
 
 
 # absolute path of the Redis server executable
@@ -225,7 +224,7 @@ def check_existing_redis_server(host: str, port: int, password: str):
 
 def application():
     parser = argparse.ArgumentParser(prog="foamcore")
-    parser.add_argument("namespace", help="name of the beamline or instrument")
+    parser.add_argument("schema", help="path of the schema file")
     parser.add_argument('-V', '--version',
                         action='version',
                         version="%(prog)s " + __version__)
@@ -265,7 +264,8 @@ def application():
 
     start_redis_server(redis_host, redis_port, password=REDIS_PASSWORD)
 
-    bridge = FoamBridge(args.namespace,
+    schema = load_schema(args.schema)
+    bridge = FoamBridge(schema,
                         zmq_endpoint=args.zmq_endpoint,
                         zmq_sock=args.zmq_sock,
                         redis_host=args.redis_host,
