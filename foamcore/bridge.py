@@ -57,13 +57,25 @@ class FoamBridge:
                 except TimeoutError:
                     continue
 
-                # TODO: validation
+                transformed = self._transform(data, self._schema)
 
                 try:
-                    stream_id = producer.produce(stream, data, self._schema)
+                    stream_id = producer.produce(stream, transformed, self._schema)
                     logger.info(f"Published new data to STREAM: "
                                 f"{stream}, {stream_id}")
                 except TimeoutError:
                     continue
                 except RuntimeError as e:
                     logger.info(str(e))
+
+    def _transform(self, data, schema):
+        """Transform data to match the schema.
+
+        Data received from the DAQ can have different formats. For example,
+        we don't want to store a serialized numpy array in Redis because
+        it is cannot be recognized by other languages except for Python.
+        Instead, we will serialize the array's data, shape and dtype separately
+        according to the schema.
+        """
+        # TODO:
+        return data
