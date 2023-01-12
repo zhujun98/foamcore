@@ -47,9 +47,9 @@ class FoamBridge:
                          deserializer=DeserializerType.SLS,
                          sock=self._zmq_sock,
                          timeout=self._zmq_timeout) as consumer:
-            producer = RedisProducer(self._redis_host, self._redis_port,
-                                     serializer=SerializerType.SLS,
-                                     password=self._redis_password)
+            producer = RedisProducer(
+                self._redis_host, self._redis_port, self._redis_password,
+                serializer=SerializerType.SLS)
 
             while True:
                 try:
