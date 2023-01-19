@@ -72,10 +72,8 @@ setup(
         'build_ext': BuildExt,
     },
     install_requires=[
-        'hiredis',
-        'redis',
         'psutil',
-        'foamclient>=0.1.3'
+        'foamclient>=0.1.4'
     ],
     extras_require={
         'test': [
