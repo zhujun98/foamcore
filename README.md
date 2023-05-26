@@ -7,10 +7,11 @@ Foamcore
 ## Installation
 
 ```shell
-conda env create -n foamcore python==3.9.12
+conda create -n foamcore python==3.9.12
 conda activate foamcore
 
 git clone https://github.com/zhujun98/foamcore.git
+cd foamcore
 pip install .
 ```
 

@@ -1,0 +1,10 @@
+[package]
+name = "foamcore"
+version = "0.1.0"
+authors = ["Jun Zhu <jun.zhu@psi.ch>"]
+license = "BSD-3-Clause"
+edition = "2021"
+
+[dependencies]
+zmq = "0.10.0"
+redis = "0.23.0"
