@@ -5,11 +5,12 @@
  *
  * Author: Jun Zhu
  */
-mod bridge;
+pub mod bridge;
+
+use crate::bridge::FoamBridge;
 
 use std::env;
 use std::fs;
-use crate::bridge::FoamBridge;
 
 fn load_schema(path: &String) -> serde_json::Value {
     let s = fs::read_to_string(path).expect("Unable to read file");
