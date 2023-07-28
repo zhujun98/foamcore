@@ -1,21 +1,46 @@
+/**
+ * Distributed under the terms of the BSD 3-Clause License.
+ *
+ * The full license is in the file LICENSE, distributed with this software.
+ *
+ * Author: Jun Zhu
+ */
 mod bridge;
 mod db;
 
-use std::str;
+use std::env;
+use std::fs;
+
+fn load_schema(path: &String) -> serde_json::Value {
+    let s = fs::read_to_string(path).expect("Unable to read file");
+    let data: serde_json::Value = serde_json::from_str(&s).expect(
+        "JSON does not have correct format");
+    if cfg!(debug_assersions) {
+        println!("{}", serde_json::to_string_pretty(&data).unwrap());
+    }
+    return data;
+}
 
 fn main() {
-    println!("Hello, world!");
+    let args: Vec<String> = env::args().collect();
 
-    let ctx = zmq::Context::new();
-
-    let socket = ctx.socket(zmq::STREAM).unwrap();
-    socket.bind("tcp://*:8888").unwrap();
-    loop {
-        let data = socket.recv_multipart(0).unwrap();
-        println!(
-            "Identity: {:?} Message : {}",
-            data[0],
-            str::from_utf8(&data[1]).unwrap()
-        );
+    if args.len() < 2 {
+        panic!("Usage: foamcore <schema file path>");
     }
+
+    let schema = load_schema(&args[1]);
+
+    // let ctx = zmq::Context::new();
+
+    // let socket = ctx.socket(zmq::PULL).unwrap();
+    // let _ = socket.connect("tcp://127.0.0.1:45454");
+    // loop {
+    //     println!("waiting for data");
+    //     let msg = socket.recv_msg(0).unwrap();
+    //     // println!(
+    //     //     "Identity: {:?} Message : {}",
+    //     //     data[0],
+    //     //     str::from_utf8(&data[1]).unwrap()
+    //     // );
+    // }
 }
