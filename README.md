@@ -1,7 +1,7 @@
 Foamcore
 ========
 
-![Build status](https://github.com/zhujun98/foamcore/actions/workflows/python-package.yml/badge.svg)
+![Build status](https://github.com/zhujun98/foamcore/actions/workflows/rust.yml/badge.svg)
 
 
 ## Installation
