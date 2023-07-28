@@ -6,10 +6,10 @@
  * Author: Jun Zhu
  */
 mod bridge;
-mod db;
 
 use std::env;
 use std::fs;
+use crate::bridge::FoamBridge;
 
 fn load_schema(path: &String) -> serde_json::Value {
     let s = fs::read_to_string(path).expect("Unable to read file");
@@ -30,17 +30,6 @@ fn main() {
 
     let schema = load_schema(&args[1]);
 
-    // let ctx = zmq::Context::new();
-
-    // let socket = ctx.socket(zmq::PULL).unwrap();
-    // let _ = socket.connect("tcp://127.0.0.1:45454");
-    // loop {
-    //     println!("waiting for data");
-    //     let msg = socket.recv_msg(0).unwrap();
-    //     // println!(
-    //     //     "Identity: {:?} Message : {}",
-    //     //     data[0],
-    //     //     str::from_utf8(&data[1]).unwrap()
-    //     // );
-    // }
+    let bridge = FoamBridge::new(schema);
+    bridge.start();
 }
