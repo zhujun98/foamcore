@@ -1,0 +1,7 @@
+name: foamcore
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - redis-server=7.0.10
+  - rust=1.69.0
