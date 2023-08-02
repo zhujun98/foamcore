@@ -6,6 +6,18 @@
  * Author: Jun Zhu
  */
 
-struct RedisProducer {
+pub struct RedisProducer {
+
+}
+
+impl RedisProducer {
+
+    pub fn new() -> Self {
+        RedisProducer {}
+    }
+
+    pub fn produce(&self) {
+
+    }
 
 }
