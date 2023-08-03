@@ -28,7 +28,7 @@ struct Cli {
     /// Path of the schema file
     schema: String,
     /// ZeroMQ endpoint
-    #[arg(long, default_value_t = String::from("tcp://localhost:45454"))]
+    #[arg(long, default_value_t = String::from("tcp://127.0.0.1:45454"))]
     zmq_endpoint: String,
     /// ZeroMQ socket type (REQ, PULL or SUB)
     #[arg(long, default_value_t = String::from("SUB"))]
@@ -46,6 +46,6 @@ fn main() {
 
     let schema = load_schema(&cli.schema);
 
-    let bridge = FoamBridge::new(schema);
+    let bridge = FoamBridge::new(schema, cli.zmq_endpoint, &cli.zmq_sock);
     bridge.start();
 }
