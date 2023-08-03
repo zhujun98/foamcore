@@ -5,12 +5,13 @@
  *
  * Author: Jun Zhu
  */
+use std::fs;
+
+use clap::Parser;
+
 pub mod bridge;
 
 use crate::bridge::FoamBridge;
-
-use std::env;
-use std::fs;
 
 fn load_schema(path: &String) -> serde_json::Value {
     let s = fs::read_to_string(path).expect("Unable to read file");
@@ -22,14 +23,28 @@ fn load_schema(path: &String) -> serde_json::Value {
     return data;
 }
 
+#[derive(Parser)]
+struct Cli {
+    /// Path of the schema file
+    schema: String,
+    /// ZeroMQ endpoint
+    #[arg(long, default_value_t = String::from("tcp://localhost:45454"))]
+    zmq_endpoint: String,
+    /// ZeroMQ socket type (REQ, PULL or SUB)
+    #[arg(long, default_value_t = String::from("SUB"))]
+    zmq_sock: String,
+    /// Hostname of the Redis server
+    #[arg(long, default_value_t = String::from("127.0.0.1"))]
+    redis_host: String,
+    /// Port of the Redis server
+    #[arg(long, default_value_t = 6379)]
+    redis_port: i32,
+}
+
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let cli = Cli::parse();
 
-    if args.len() < 2 {
-        panic!("Usage: foamcore <schema file path>");
-    }
-
-    let schema = load_schema(&args[1]);
+    let schema = load_schema(&cli.schema);
 
     let bridge = FoamBridge::new(schema);
     bridge.start();
