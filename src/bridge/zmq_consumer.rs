@@ -11,27 +11,19 @@ pub struct ZmqConsumer {
 }
 
 impl ZmqConsumer {
-    pub fn new(sock_type: zmq::SocketType) -> Self {
+    pub fn new(endpoint: &str, sock_type: zmq::SocketType) -> Self {
         let ctx = zmq::Context::new();
         let socket = ctx.socket(sock_type).unwrap();
+        socket.connect(endpoint).unwrap();
+
         ZmqConsumer {
             ctx,
             socket
         }
     }
 
-    pub fn connect(&self, endpoint: &str) -> zmq::Result<()> {
-        self.socket.connect(endpoint)
-    }
-
-    pub fn next(&self) {
-        println!("waiting for data");
-        let _msg = self.socket.recv_msg(0).unwrap();
-        // println!(
-        //     "Identity: {:?} Message : {}",
-        //     msg[0],
-        //     str::from_utf8(&msg[1]).unwrap()
-        // );
-        // }
+    pub fn next(&self) -> zmq::Message {
+        let msg: zmq::Message = self.socket.recv_msg(0).unwrap();
+        msg
     }
 }
