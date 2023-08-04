@@ -9,7 +9,9 @@ use std::fs;
 
 use clap::Parser;
 
-pub mod bridge;
+mod bridge;
+mod redis_client;
+mod zmq_client;
 
 use crate::bridge::FoamBridge;
 
@@ -46,6 +48,7 @@ fn main() {
 
     let schema = load_schema(&cli.schema);
 
-    let bridge = FoamBridge::new(schema, cli.zmq_endpoint, &cli.zmq_sock);
+    let bridge = FoamBridge::new(
+        schema, cli.zmq_endpoint, &cli.zmq_sock, cli.redis_host, cli.redis_port);
     bridge.start();
 }
