@@ -1,28 +1,22 @@
-/**
- * Distributed under the terms of the BSD 3-Clause License.
- *
- * The full license is in the file LICENSE, distributed with this software.
- *
- * Author: Jun Zhu
- */
-pub mod zmq_consumer;
-pub mod redis_producer;
-
-use crate::bridge::zmq_consumer::ZmqConsumer;
-use crate::bridge::redis_producer::RedisProducer;
+use crate::zmq_clients::zmq_consumer::ZmqConsumer;
+use crate::redis_clients::redis_producer::RedisProducer;
 
 
 pub struct FoamBridge {
-    schema: serde_json::Value,
+    schema: apache_avro::Schema,
     zmq_endpoint: String,
     zmq_socket: zmq::SocketType,
+    redis_host: String,
+    redis_port: i32,
 }
 
 impl FoamBridge {
 
-    pub fn new(schema: serde_json::Value,
+    pub fn new(schema: apache_avro::Schema,
                zmq_endpoint: String,
-               zmq_sock: &str) -> FoamBridge {
+               zmq_sock: &str,
+               redis_host: String,
+               redis_port: i32) -> FoamBridge {
         let zmq_socket = match zmq_sock.to_ascii_lowercase().as_str() {
             "pull" => zmq::SocketType::PULL,
             "sub" => zmq::SocketType::SUB,
@@ -32,19 +26,22 @@ impl FoamBridge {
         FoamBridge {
             schema,
             zmq_endpoint,
-            zmq_socket
+            zmq_socket,
+            redis_host,
+            redis_port
         }
     }
 
     pub fn start(&self) {
+        let stream = "";
+        let consumer = ZmqConsumer::new(&self.zmq_endpoint, self.zmq_socket, &self.schema);
 
-        let consumer = ZmqConsumer::new(&self.zmq_endpoint, self.zmq_socket);
-
-        // let producer = RedisProducer::new();
+        let mut producer = RedisProducer::new(&self.redis_host, self.redis_port);
 
         loop {
             let data = consumer.next();
             println!("{:?}", data.as_ptr());
+            producer.produce(stream, data, &self.schema);
         }
     }
 }

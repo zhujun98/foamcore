@@ -7,20 +7,24 @@
  */
 use std::fs;
 
+use apache_avro;
 use clap::Parser;
 
-pub mod bridge;
+mod bridge;
+mod redis_clients;
+mod zmq_clients;
 
 use crate::bridge::FoamBridge;
 
-fn load_schema(path: &String) -> serde_json::Value {
+fn load_schema(path: &String) -> apache_avro::Schema {
     let s = fs::read_to_string(path).expect("Unable to read file");
-    let data: serde_json::Value = serde_json::from_str(&s).expect(
+    let json_schema: serde_json::Value = serde_json::from_str(&s).expect(
         "JSON does not have correct format");
     if cfg!(debug_assersions) {
-        println!("{}", serde_json::to_string_pretty(&data).unwrap());
+        println!("{}", serde_json::to_string_pretty(&json_schema).unwrap());
     }
-    return data;
+    let schema = apache_avro::Schema::parse(&json_schema).unwrap();
+    return schema;
 }
 
 #[derive(Parser)]
@@ -46,6 +50,7 @@ fn main() {
 
     let schema = load_schema(&cli.schema);
 
-    let bridge = FoamBridge::new(schema, cli.zmq_endpoint, &cli.zmq_sock);
+    let bridge = FoamBridge::new(
+        schema, cli.zmq_endpoint, &cli.zmq_sock, cli.redis_host, cli.redis_port);
     bridge.start();
 }

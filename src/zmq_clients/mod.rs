@@ -5,19 +5,4 @@
  *
  * Author: Jun Zhu
  */
-
-pub struct RedisProducer {
-
-}
-
-impl RedisProducer {
-
-    pub fn new() -> Self {
-        RedisProducer {}
-    }
-
-    pub fn produce(&self) {
-
-    }
-
-}
+pub mod zmq_consumer;
