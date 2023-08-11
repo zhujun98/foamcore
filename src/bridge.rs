@@ -1,9 +1,9 @@
-use crate::zmq_client::zmq_consumer::ZmqConsumer;
-use crate::redis_client::redis_producer::RedisProducer;
+use crate::zmq_clients::zmq_consumer::ZmqConsumer;
+use crate::redis_clients::redis_producer::RedisProducer;
 
 
 pub struct FoamBridge {
-    schema: serde_json::Value,
+    schema: apache_avro::Schema,
     zmq_endpoint: String,
     zmq_socket: zmq::SocketType,
     redis_host: String,
@@ -12,7 +12,7 @@ pub struct FoamBridge {
 
 impl FoamBridge {
 
-    pub fn new(schema: serde_json::Value,
+    pub fn new(schema: apache_avro::Schema,
                zmq_endpoint: String,
                zmq_sock: &str,
                redis_host: String,
@@ -34,9 +34,9 @@ impl FoamBridge {
 
     pub fn start(&self) {
         let stream = "";
-        let consumer = ZmqConsumer::new(&self.zmq_endpoint, self.zmq_socket);
+        let consumer = ZmqConsumer::new(&self.zmq_endpoint, self.zmq_socket, &self.schema);
 
-        let producer = RedisProducer::new(&self.redis_host, self.redis_port);
+        let mut producer = RedisProducer::new(&self.redis_host, self.redis_port);
 
         loop {
             let data = consumer.next();

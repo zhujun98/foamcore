@@ -5,35 +5,34 @@
  *
  * Author: Jun Zhu
  */
+use std::rc::Rc;
 use std::collections::HashMap;
 
-pub struct CachedSchemaRegistry<'a> {
-    client: &'a redis::Client,
-    schemas: HashMap<String, serde_json::Value>,
+pub struct CachedSchemaRegistry {
+    client: Rc<redis::Client>,
+    schemas: HashMap<String, apache_avro::Schema>,
 }
 
-impl CachedSchemaRegistry {
-    pub fn new(client: &redis::Client) -> Self {
-        let schemas : HashMap<String, serde_json::Value> = HashMap::new();
+impl<'a> CachedSchemaRegistry {
+    pub fn new(client: Rc<redis::Client>) -> Self {
+        let schemas : HashMap<String, apache_avro::Schema> = HashMap::new();
         CachedSchemaRegistry {
             client,
             schemas,
         }
     }
 
-    pub fn get(&self, stream: &str) -> &serde_json::Value {
+    pub fn get(&self, stream: &str) -> &apache_avro::Schema {
         if self.schemas.contains_key(stream) {
-            self.schemas.get(stream)
+            return self.schemas.get(stream).unwrap();
         }
 
         self.schemas.get(stream).unwrap()
     }
 
-    pub fn set(&self, stream: &str, schema: serde_json::Value) {
+    pub fn set(&self, stream: &str, schema: apache_avro::Schema) {
         if self.schemas.contains_key(stream) {
             return
         }
-
-
     }
 }

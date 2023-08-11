@@ -5,13 +5,16 @@
  *
  * Author: Jun Zhu
  */
-pub struct ZmqConsumer {
+use apache_avro::{AvroResult, Reader};
+
+pub struct ZmqConsumer<'a> {
     ctx: zmq::Context,
     socket: zmq::Socket,
+    schema: &'a apache_avro::Schema
 }
 
-impl ZmqConsumer {
-    pub fn new(endpoint: &str, sock_type: zmq::SocketType) -> Self {
+impl<'a> ZmqConsumer<'a> {
+    pub fn new(endpoint: &str, sock_type: zmq::SocketType, schema: &'a apache_avro::Schema) -> Self {
         let ctx = zmq::Context::new();
         let socket = ctx.socket(sock_type).unwrap();
         socket.connect(endpoint).unwrap();
@@ -22,12 +25,17 @@ impl ZmqConsumer {
 
         ZmqConsumer {
             ctx,
-            socket
+            socket,
+            schema
         }
     }
 
     pub fn next(&self) -> zmq::Message {
         let msg: zmq::Message = self.socket.recv_msg(0).unwrap();
         msg
+        // let mut reader = Reader::with_schema(&self.schema, msg).unwrap();
+        // for record in reader {
+        //     println!("{:?}", record);
+        // }
     }
 }
