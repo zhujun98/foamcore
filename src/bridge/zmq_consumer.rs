@@ -16,6 +16,10 @@ impl ZmqConsumer {
         let socket = ctx.socket(sock_type).unwrap();
         socket.connect(endpoint).unwrap();
 
+        if sock_type == zmq::SocketType::SUB {
+            socket.set_subscribe(b"").unwrap();
+        }
+
         ZmqConsumer {
             ctx,
             socket
