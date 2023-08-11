@@ -5,6 +5,8 @@
  *
  * Author: Jun Zhu
  */
+use std::any::Any;
+use std::collections::HashMap;
 use apache_avro::{AvroResult, Reader};
 
 pub struct ZmqConsumer<'a> {
@@ -30,12 +32,12 @@ impl<'a> ZmqConsumer<'a> {
         }
     }
 
-    pub fn next(&self) -> zmq::Message {
-        let msg: zmq::Message = self.socket.recv_msg(0).unwrap();
-        msg
-        // let mut reader = Reader::with_schema(&self.schema, msg).unwrap();
-        // for record in reader {
-        //     println!("{:?}", record);
-        // }
+    pub fn next(&self) -> HashMap<String, dyn Any> {
+        let data = self.socket.recv_bytes(0).unwrap();
+
+        let reader = Reader::new(&data[..]).unwrap();
+        for value in reader {
+            println!("{:?}", value.unwrap());
+        }
     }
 }
