@@ -5,7 +5,8 @@
  *
  * Author: Jun Zhu
  */
-use apache_avro::{AvroResult, Reader};
+use apache_avro::{Reader};
+use apache_avro::types::{Value};
 
 pub struct ZmqConsumer<'a> {
     ctx: zmq::Context,
@@ -30,12 +31,10 @@ impl<'a> ZmqConsumer<'a> {
         }
     }
 
-    pub fn next(&self) -> zmq::Message {
-        let msg: zmq::Message = self.socket.recv_msg(0).unwrap();
-        msg
-        // let mut reader = Reader::with_schema(&self.schema, msg).unwrap();
-        // for record in reader {
-        //     println!("{:?}", record);
-        // }
+    pub fn next(&self) -> Value {
+        let data = self.socket.recv_bytes(0).unwrap();
+
+        let mut reader = Reader::new(&data[..]).unwrap();
+        return reader.next().unwrap().unwrap();
     }
 }

@@ -1,3 +1,10 @@
+/**
+ * Distributed under the terms of the BSD 3-Clause License.
+ *
+ * The full license is in the file LICENSE, distributed with this software.
+ *
+ * Author: Jun Zhu
+ */
 use crate::zmq_clients::zmq_consumer::ZmqConsumer;
 use crate::redis_clients::redis_producer::RedisProducer;
 
@@ -33,15 +40,15 @@ impl FoamBridge {
     }
 
     pub fn start(&self) {
-        let stream = "";
         let consumer = ZmqConsumer::new(&self.zmq_endpoint, self.zmq_socket, &self.schema);
 
         let mut producer = RedisProducer::new(&self.redis_host, self.redis_port);
 
+        let stream = "";
         loop {
-            let data = consumer.next();
-            println!("{:?}", data.as_ptr());
-            producer.produce(stream, data, &self.schema);
+            let record = consumer.next();
+            let stream_id = producer.produce(stream, record, &self.schema);
+            println!("Published new data to STREAM: {:?}, {:?}", stream, stream_id);
         }
     }
 }

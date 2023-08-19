@@ -8,6 +8,8 @@
 use std::rc::Rc;
 use std::collections::HashMap;
 
+use redis::{Commands, RedisError};
+
 pub struct CachedSchemaRegistry {
     client: Rc<redis::Client>,
     schemas: HashMap<String, apache_avro::Schema>,
@@ -22,17 +24,31 @@ impl<'a> CachedSchemaRegistry {
         }
     }
 
-    pub fn get(&self, stream: &str) -> &apache_avro::Schema {
+    pub fn get(&mut self, stream: &str) -> Result<&apache_avro::Schema, RedisError> {
         if self.schemas.contains_key(stream) {
-            return self.schemas.get(stream).unwrap();
+            return Ok(self.schemas.get(stream).unwrap());
         }
 
-        self.schemas.get(stream).unwrap()
+        let mut con = self.client.get_connection()?;
+        let s: String = con.hget(stream.to_owned() + ":schema", "schema").unwrap();
+        let encoded_schema = serde_json::from_str(s.as_str()).unwrap();
+        let schema: apache_avro::Schema = apache_avro::Schema::parse(&encoded_schema).unwrap();
+
+        self.schemas.insert(stream.to_owned(), schema).unwrap();
+
+        Ok(self.schemas.get(stream).unwrap())
     }
 
-    pub fn set(&self, stream: &str, schema: apache_avro::Schema) {
+    pub fn set(&mut self, stream: &str, schema: &apache_avro::Schema) -> Result<(), RedisError> {
         if self.schemas.contains_key(stream) {
-            return
+            return Ok(());
         }
+
+        let mut con = self.client.get_connection()?;
+        let encoded_schema = serde_json::to_string(&schema).unwrap();
+        let _ : () = con.hset(stream.to_owned() + ":schema", "schema", encoded_schema)?;
+        self.schemas.insert(stream.to_owned(), (*schema).clone());
+
+        Ok(())
     }
 }
