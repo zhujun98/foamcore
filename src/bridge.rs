@@ -46,8 +46,9 @@ impl FoamBridge {
 
         let stream = "";
         loop {
-            let data = consumer.next();
-            producer.produce(stream, data, &self.schema);
+            let record = consumer.next();
+            let stream_id = producer.produce(stream, record, &self.schema);
+            println!("Published new data to STREAM: {:?}, {:?}", stream, stream_id);
         }
     }
 }
