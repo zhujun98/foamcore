@@ -5,27 +5,16 @@
  *
  * Author: Jun Zhu
  */
-use std::fs;
-
-use apache_avro;
 use clap::Parser;
 
 mod bridge;
 mod redis_clients;
+mod utils;
 mod zmq_clients;
 
 use crate::bridge::FoamBridge;
+use crate::utils::load_schema;
 
-fn load_schema(path: &String) -> apache_avro::Schema {
-    let s = fs::read_to_string(path).expect("Unable to read file");
-    let json_schema: serde_json::Value = serde_json::from_str(&s).expect(
-        "JSON does not have correct format");
-    if cfg!(debug_assersions) {
-        println!("{}", serde_json::to_string_pretty(&json_schema).unwrap());
-    }
-    let schema = apache_avro::Schema::parse(&json_schema).unwrap();
-    return schema;
-}
 
 #[derive(Parser)]
 struct Cli {

@@ -41,3 +41,11 @@ impl RedisProducer {
         Ok(stream_id)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_redis_producer() {
+
+    }
+}

@@ -52,3 +52,11 @@ impl FoamBridge {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_bridge() {
+
+    }
+}

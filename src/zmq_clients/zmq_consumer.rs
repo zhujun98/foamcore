@@ -17,8 +17,9 @@ pub struct ZmqConsumer<'a> {
 impl<'a> ZmqConsumer<'a> {
     pub fn new(endpoint: &str, sock_type: zmq::SocketType, schema: &'a apache_avro::Schema) -> Self {
         let ctx = zmq::Context::new();
-        let socket = ctx.socket(sock_type).unwrap();
-        socket.connect(endpoint).unwrap();
+        let socket = ctx.socket(sock_type).expect("Error in creating zmq socket");
+        socket.connect(endpoint).unwrap_or_else(
+            |_| panic!("Error in connecting to endpoint: {}", endpoint));
 
         if sock_type == zmq::SocketType::SUB {
             socket.set_subscribe(b"").unwrap();
@@ -36,5 +37,13 @@ impl<'a> ZmqConsumer<'a> {
 
         let mut reader = Reader::new(&data[..]).unwrap();
         return reader.next().unwrap().unwrap();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_zmq_consumer() {
+
     }
 }
