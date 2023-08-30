@@ -7,19 +7,24 @@
  */
 use clap::Parser;
 
-mod bridge;
-mod redis_clients;
+mod decoder;
+mod redis_producer;
+mod schema_registry;
 mod utils;
-mod zmq_clients;
+mod zmq_consumer;
 
-use crate::bridge::FoamBridge;
 use crate::utils::load_schema;
-
+use crate::decoder::create_decoder;
+use crate::zmq_consumer::ZmqConsumer;
+use crate::redis_producer::RedisProducer;
 
 #[derive(Parser)]
 struct Cli {
-    /// Path of the schema file
+    /// Path of the Avro schema file
     schema: String,
+    /// Decoder name for the incoming data
+    #[arg(long, default_value_t = String::from("avro"))]
+    decoder: String,
     /// ZeroMQ endpoint
     #[arg(long, default_value_t = String::from("tcp://127.0.0.1:45454"))]
     zmq_endpoint: String,
@@ -37,9 +42,37 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
+    let zmq_socket = match cli.zmq_sock.to_ascii_lowercase().as_str() {
+        "pull" => zmq::SocketType::PULL,
+        "sub" => zmq::SocketType::SUB,
+        _ => panic!("Unknown ZeroMQ socket type string: {:?}", cli.zmq_sock),
+    };
+
+    let decoder = create_decoder(&cli.decoder);
+
     let schema = load_schema(&cli.schema);
 
-    let bridge = FoamBridge::new(
-        schema, cli.zmq_endpoint, &cli.zmq_sock, cli.redis_host, cli.redis_port);
-    bridge.start();
+    let consumer = ZmqConsumer::new(&cli.zmq_endpoint, zmq_socket);
+
+    let mut producer = RedisProducer::new(&cli.redis_host, cli.redis_port);
+
+    loop {
+        let bytes = match consumer.next() {
+            Ok(x) => x,
+            Err(error) => panic!("Error when receiving the data: {:?}", error),
+        };
+
+        let decoded = decoder.unpack(bytes);
+
+        for data in decoded {
+            let stream_id = match producer.produce(data, &schema) {
+                Ok(x) => x,
+                Err(e) => {
+                    println!("Error while publishing data to Redis: {:?}", e);
+                    continue;
+                }
+            };
+            println!("Published new data to Redis: {}", stream_id);
+        }
+    }
 }
