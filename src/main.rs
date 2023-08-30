@@ -65,14 +65,14 @@ fn main() {
         let decoded = decoder.unpack(bytes);
 
         for data in decoded {
-            let stream_id = match producer.produce(data, &schema) {
+            let (stream, entry) = match producer.produce(data, &schema) {
                 Ok(x) => x,
                 Err(e) => {
                     println!("Error while publishing data to Redis: {:?}", e);
                     continue;
                 }
             };
-            println!("Published new data to Redis: {}", stream_id);
+            println!("Published new data ({}) to Redis stream: {}", entry, stream);
         }
     }
 }

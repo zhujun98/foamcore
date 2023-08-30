@@ -37,7 +37,7 @@ impl RedisProducer {
 
     pub fn produce(&mut self,
                    data: HashMap<String, Value>,
-                   schema: &Schema) -> Result<String, RedisError> {
+                   schema: &Schema) -> Result<(String, String), RedisError> {
         let mut con = self.client.get_connection()?;
 
         let mut writer = Writer::new(schema, Vec::new());
@@ -55,14 +55,14 @@ impl RedisProducer {
         };
 
         let stream = match schema {
-            Schema::Record(s) => &s.name.name,
+            Schema::Record(s) => format!("{}:{}", &s.name.namespace.clone().unwrap(), &s.name.name),
             _ => unreachable!(),
         };
-        let stream_id = con.xadd(stream, "*", &[("data", encoded)])?;
+        let entry = con.xadd(&stream, "*", &[("data", encoded)])?;
 
-        self.schema_registry.set(stream, schema)?;
+        self.schema_registry.set(&format!("{}:schema", &stream), schema)?;
 
-        Ok(stream_id)
+        Ok((stream, entry))
     }
 }
 
