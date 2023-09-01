@@ -5,12 +5,15 @@
  *
  * Author: Jun Zhu
  */
+use std::collections::HashMap;
 use std::rc::Rc;
 
-use apache_avro::types::{Value};
+use apache_avro::{Writer};
+use apache_avro::types::{Record, Value};
+use apache_avro::schema::Schema;
 use redis::{Commands, RedisError};
 
-use crate::redis_clients::schema_registry::CachedSchemaRegistry;
+use crate::schema_registry::CachedSchemaRegistry;
 
 pub struct RedisProducer {
     client: Rc<redis::Client>,
@@ -32,9 +35,30 @@ impl RedisProducer {
         }
     }
 
-    pub fn produce(&mut self, stream: &str, item: Value, schema: &apache_avro::Schema) -> Result<String, RedisError> {
+    pub fn produce(&mut self,
+                   data: HashMap<String, Value>,
+                   schema: &Schema) -> Result<String, RedisError> {
         let mut con = self.client.get_connection()?;
-        let stream_id = con.xadd(stream, "*", &[("key", "42")])?;
+
+        let mut writer = Writer::new(schema, Vec::new());
+        let mut record = Record::new(schema).unwrap();
+        for (k, v) in data {
+            record.put(&k, v);
+        }
+        let _ = writer.append(record);
+
+        let encoded = match writer.into_inner() {
+            Ok(b) => b,
+            Err(e) => {
+                panic!("{:?}", e);
+            }
+        };
+
+        let stream = match schema {
+            Schema::Record(s) => &s.name.name,
+            _ => unreachable!(),
+        };
+        let stream_id = con.xadd(stream, "*", &[("data", encoded)])?;
 
         self.schema_registry.set(stream, schema)?;
 

@@ -8,23 +8,24 @@
 use std::rc::Rc;
 use std::collections::HashMap;
 
+use apache_avro::schema::Schema;
 use redis::{Commands, RedisError};
 
 pub struct CachedSchemaRegistry {
     client: Rc<redis::Client>,
-    schemas: HashMap<String, apache_avro::Schema>,
+    schemas: HashMap<String, Schema>,
 }
 
 impl<'a> CachedSchemaRegistry {
     pub fn new(client: Rc<redis::Client>) -> Self {
-        let schemas : HashMap<String, apache_avro::Schema> = HashMap::new();
+        let schemas : HashMap<String, Schema> = HashMap::new();
         CachedSchemaRegistry {
             client,
             schemas,
         }
     }
 
-    pub fn get(&mut self, stream: &str) -> Result<&apache_avro::Schema, RedisError> {
+    pub fn get(&mut self, stream: &str) -> Result<&Schema, RedisError> {
         if self.schemas.contains_key(stream) {
             return Ok(self.schemas.get(stream).unwrap());
         }
@@ -32,14 +33,14 @@ impl<'a> CachedSchemaRegistry {
         let mut con = self.client.get_connection()?;
         let s: String = con.hget(stream.to_owned() + ":schema", "schema").unwrap();
         let encoded_schema = serde_json::from_str(s.as_str()).unwrap();
-        let schema: apache_avro::Schema = apache_avro::Schema::parse(&encoded_schema).unwrap();
+        let schema = Schema::parse(&encoded_schema).unwrap();
 
         self.schemas.insert(stream.to_owned(), schema).unwrap();
 
         Ok(self.schemas.get(stream).unwrap())
     }
 
-    pub fn set(&mut self, stream: &str, schema: &apache_avro::Schema) -> Result<(), RedisError> {
+    pub fn set(&mut self, stream: &str, schema: &Schema) -> Result<(), RedisError> {
         if self.schemas.contains_key(stream) {
             return Ok(());
         }
