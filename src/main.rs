@@ -54,7 +54,7 @@ fn main() {
 
     let consumer = ZmqConsumer::new(&cli.zmq_endpoint, zmq_socket);
 
-    let mut producer = RedisProducer::new(&cli.redis_host, cli.redis_port);
+    let mut producer = RedisProducer::new(&cli.redis_host, cli.redis_port, 10usize);
 
     loop {
         let bytes = match consumer.next() {
