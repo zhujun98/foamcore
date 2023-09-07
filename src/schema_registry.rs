@@ -8,47 +8,47 @@
 use std::rc::Rc;
 use std::collections::HashMap;
 
-use apache_avro::schema::Schema;
-use redis::{Commands, RedisError};
+use redis::Commands;
+
+use crate::utils::FcResult;
 
 pub struct CachedSchemaRegistry {
     client: Rc<redis::Client>,
-    schemas: HashMap<String, Schema>,
+    schemas: HashMap<String, serde_json::Value>,
 }
 
 impl<'a> CachedSchemaRegistry {
     pub fn new(client: Rc<redis::Client>) -> Self {
-        let schemas : HashMap<String, Schema> = HashMap::new();
+        let schemas : HashMap<String, serde_json::Value> = HashMap::new();
         CachedSchemaRegistry {
             client,
             schemas,
         }
     }
 
-    pub fn get(&mut self, stream: &str) -> Result<&Schema, RedisError> {
-        if self.schemas.contains_key(stream) {
-            return Ok(self.schemas.get(stream).unwrap());
-        }
+    // pub fn get(&mut self, stream: &str) -> Result<&serde_json::Value, RedisError> {
+    //     if self.schemas.contains_key(stream) {
+    //         return Ok(self.schemas.get(stream).unwrap());
+    //     }
+    //
+    //     let mut con = self.client.get_connection()?;
+    //     let s: String = con.hget(stream.to_owned() + ":schema", "schema").unwrap();
+    //     let schema = serde_json::from_str(s.as_str()).unwrap();
+    //
+    //     self.schemas.insert(stream.to_owned(), schema).unwrap();
+    //
+    //     Ok(self.schemas.get(stream).unwrap())
+    // }
 
-        let mut con = self.client.get_connection()?;
-        let s: String = con.hget(stream.to_owned() + ":schema", "schema").unwrap();
-        let encoded_schema = serde_json::from_str(s.as_str()).unwrap();
-        let schema = Schema::parse(&encoded_schema).unwrap();
-
-        self.schemas.insert(stream.to_owned(), schema).unwrap();
-
-        Ok(self.schemas.get(stream).unwrap())
-    }
-
-    pub fn set(&mut self, stream: &str, schema: &Schema) -> Result<(), RedisError> {
+    pub fn set(&mut self, stream: &str, schema: &serde_json::Value) -> FcResult<()> {
         if self.schemas.contains_key(stream) {
             return Ok(());
         }
 
         let mut con = self.client.get_connection()?;
-        let encoded_schema = serde_json::to_string(&schema).unwrap();
-        let _ : () = con.hset(stream.to_owned() + ":schema", "schema", encoded_schema)?;
-        self.schemas.insert(stream.to_owned(), (*schema).clone());
+
+        let _ : () = con.hset(stream.to_owned() + ":schema", "schema", schema.to_string())?;
+        self.schemas.insert(stream.to_owned(), schema.clone());
 
         Ok(())
     }

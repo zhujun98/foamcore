@@ -11,4 +11,4 @@ zmq = "0.10.0"
 redis = "0.23.2"
 serde_json = "1.0.104"
 apache-avro = "0.15.0"
-
+thiserror = "1.0.47"

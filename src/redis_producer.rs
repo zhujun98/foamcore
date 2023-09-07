@@ -5,67 +5,55 @@
  *
  * Author: Jun Zhu
  */
-use std::collections::HashMap;
 use std::rc::Rc;
 
-use apache_avro::{Writer};
-use apache_avro::types::{Record, Value};
-use apache_avro::schema::Schema;
-use redis::{Commands, RedisError};
+use redis::{Commands};
 use redis::streams::StreamMaxlen::Equals;
 
+use crate::encoder::{create_encoder, Encoder};
 use crate::schema_registry::CachedSchemaRegistry;
+use crate::utils::{Decoded, FcResult};
 
 pub struct RedisProducer {
     client: Rc<redis::Client>,
-    schema_registry: CachedSchemaRegistry,
-    maxlen: usize,
+   schema_registry: CachedSchemaRegistry,
+    encoder: Option<Box<dyn Encoder>>,
 }
 
 impl RedisProducer {
 
-    pub fn new(host: &str, port: i32, maxlen: usize) -> Self {
+    pub fn new(host: &str, port: i32) -> Self {
 
         let client = Rc::new(redis::Client::open(
             "redis://".to_owned() + host + ":" + port.to_string().as_str()).unwrap());
 
-        let schema_registry = CachedSchemaRegistry::new(Rc::clone(&client));
+       let schema_registry = CachedSchemaRegistry::new(Rc::clone(&client));
 
         RedisProducer {
             client: Rc::clone(&client),
             schema_registry,
-            maxlen,
+            encoder: None,
         }
     }
 
-    pub fn produce(&mut self,
-                   data: HashMap<String, Value>,
-                   schema: &Schema) -> Result<(String, String), RedisError> {
-        let mut con = self.client.get_connection()?;
+    pub fn set_encoder(&mut self, name: &str, schema: Option<&serde_json::Value>) {
+        self.encoder = Some(create_encoder(name, schema));
+    }
 
-        let mut writer = Writer::new(schema, Vec::new());
-        let mut record = Record::new(schema).unwrap();
-        for (k, v) in data {
-            record.put(&k, v);
-        }
-        let _ = writer.append(record);
+    pub fn publish_schema(&mut self, stream: &str, schema: &serde_json::Value) {
+        let _ = self.schema_registry.set(stream, schema).unwrap();
+    }
 
-        let encoded = match writer.into_inner() {
-            Ok(b) => b,
-            Err(e) => {
-                panic!("{:?}", e);
-            }
-        };
+    pub fn produce(&mut self, stream: &str, data: &Vec<Decoded>, maxlen: usize)
+            -> Vec<FcResult<String>> {
+        data.into_iter().map(|x| {
+            let encoded = self.encoder.as_ref().unwrap().pack(x)?;
 
-        let stream = match schema {
-            Schema::Record(s) => format!("{}:{}", &s.name.namespace.clone().unwrap(), &s.name.name),
-            _ => unreachable!(),
-        };
-        let entry = con.xadd_maxlen(&stream, Equals(self.maxlen), "*", &[("data", encoded)])?;
+            let mut con = self.client.get_connection()?;
 
-        self.schema_registry.set(&format!("{}:schema", &stream), schema)?;
-
-        Ok((stream, entry))
+            let entry = con.xadd_maxlen(stream, Equals(maxlen), "*", &[("data", encoded)])?;
+            Ok(entry)
+        }).collect()
     }
 }
 
