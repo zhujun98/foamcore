@@ -8,23 +8,27 @@
 use clap::Parser;
 
 mod decoder;
+mod encoder;
 mod redis_producer;
 mod schema_registry;
 mod utils;
 mod zmq_consumer;
 
 use crate::utils::load_schema;
-use crate::decoder::create_decoder;
 use crate::zmq_consumer::ZmqConsumer;
 use crate::redis_producer::RedisProducer;
 
 #[derive(Parser)]
 struct Cli {
     /// Path of the Avro schema file
-    schema: String,
+    #[arg(default_value_t = String::from(""))]
+    schema_file: String,
     /// Decoder name for the incoming data
     #[arg(long, default_value_t = String::from("avro"))]
     decoder: String,
+    /// Encoder name for the data pushed to Redis
+    #[arg(long, default_value_t = String::from("avro"))]
+    encoder: String,
     /// ZeroMQ endpoint
     #[arg(long, default_value_t = String::from("tcp://127.0.0.1:45454"))]
     zmq_endpoint: String,
@@ -42,37 +46,35 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
+    let (schema, stream) = load_schema(&cli.schema_file);
+
     let zmq_socket = match cli.zmq_sock.to_ascii_lowercase().as_str() {
         "pull" => zmq::SocketType::PULL,
         "sub" => zmq::SocketType::SUB,
         _ => panic!("Unknown ZeroMQ socket type string: {:?}", cli.zmq_sock),
     };
 
-    let decoder = create_decoder(&cli.decoder);
-
-    let schema = load_schema(&cli.schema);
-
-    let consumer = ZmqConsumer::new(&cli.zmq_endpoint, zmq_socket);
+    let mut consumer = ZmqConsumer::new(&cli.zmq_endpoint, zmq_socket);
+    consumer.set_decoder(&cli.decoder, Some(&schema));
 
     let mut producer = RedisProducer::new(&cli.redis_host, cli.redis_port);
+    producer.set_encoder(&cli.encoder, Some(&schema));
+    producer.publish_schema(&stream, &schema);
 
     loop {
-        let bytes = match consumer.next() {
+        let decoded = match consumer.consume() {
             Ok(x) => x,
-            Err(error) => panic!("Error when receiving the data: {:?}", error),
+            Err(e) => panic!("Error while consuming data: {:?}", e),
         };
 
-        let decoded = decoder.unpack(bytes);
+        let entries = producer.produce(&stream, &decoded, 10);
 
-        for data in decoded {
-            let stream_id = match producer.produce(data, &schema) {
-                Ok(x) => x,
-                Err(e) => {
-                    println!("Error while publishing data to Redis: {:?}", e);
-                    continue;
-                }
-            };
-            println!("Published new data to Redis: {}", stream_id);
-        }
+        for entry in entries {
+            match entry {
+                Ok(x) => println!("Published new data ({}) to Redis stream: {}", x, stream),
+                Err(e) => println!("Error while publishing data to Redis: {:?}", e),
+            }
+        };
+
     }
 }

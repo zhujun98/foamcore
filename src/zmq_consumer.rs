@@ -5,11 +5,13 @@
  *
  * Author: Jun Zhu
  */
-use zmq::Result;
+use crate::decoder::{create_decoder, Decoder};
+use crate::utils::{Decoded, Encoded, FcResult};
 
 pub struct ZmqConsumer {
     ctx: zmq::Context,
     socket: zmq::Socket,
+    decoder: Option<Box<dyn Decoder>>,
 }
 
 impl ZmqConsumer {
@@ -26,44 +28,49 @@ impl ZmqConsumer {
         ZmqConsumer {
             ctx,
             socket,
+            decoder: None
         }
     }
 
-    pub fn next(&self) -> Result<Vec<u8>>  {
-        self.socket.recv_bytes(0)
+    pub fn set_decoder(&mut self, name: &str, schema: Option<&serde_json::Value>) {
+        self.decoder = Some(create_decoder(name, schema));
+    }
+
+    pub fn consume(&self) -> FcResult<Vec<Decoded>> {
+        let bytes: Encoded = self.socket.recv_bytes(0)?;
+        self.decoder.as_ref().unwrap().unpack(&bytes)
     }
 }
 
 #[cfg(test)]
 mod tests {
 
-    use std::thread;
-    use crate::zmq_consumer::ZmqConsumer;
+    // use std::thread;
 
-    struct ZmqProducer {
-        ctx: zmq::Context,
-        socket: zmq::Socket,
-    }
-
-    impl ZmqProducer {
-        pub fn new(endpoint: &str, sock_type: zmq::SocketType) -> Self {
-            let ctx = zmq::Context::new();
-            let socket = ctx.socket(sock_type).unwrap();
-
-            socket.bind("tcp://*.5555").unwrap();
-
-            ZmqProducer {
-                ctx,
-                socket,
-            }
-        }
-
-        pub fn start() {
-            thread::spawn(|| {
-
-            });
-        }
-    }
+    // struct ZmqProducer {
+    //     ctx: zmq::Context,
+    //     socket: zmq::Socket,
+    // }
+    //
+    // impl ZmqProducer {
+    //     pub fn new(endpoint: &str, sock_type: zmq::SocketType) -> Self {
+    //         let ctx = zmq::Context::new();
+    //         let socket = ctx.socket(sock_type).unwrap();
+    //
+    //         socket.bind(endpoint).unwrap();
+    //
+    //         ZmqProducer {
+    //             ctx,
+    //             socket,
+    //         }
+    //     }
+    //
+    //     pub fn start() {
+    //         thread::spawn(|| {
+    //
+    //         });
+    //     }
+    // }
 
     #[test]
     fn test_zmq_consumer() {
