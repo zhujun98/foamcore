@@ -51,13 +51,30 @@ impl Encoder for PickleEncoder {
 }
 
 pub fn create_encoder(name: &str, schema: Option<&serde_json::Value>) -> Box<dyn Encoder> {
-    let n = name.to_lowercase();
-    if n == "avro" {
-        return Box::new(AvroEncoder::new(schema.unwrap()));
+    match name.to_lowercase().as_str() {
+        "avro" => Box::new(AvroEncoder::new(schema.unwrap())),
+        "pickle" => Box::new(PickleEncoder),
+        _ => panic!("Unknown encoder name: {}", name),
     }
-    if n == "pickle" {
-        return Box::new(PickleEncoder);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::encoder::create_encoder;
+
+    #[test]
+    fn test_avro_decoder() {
+
     }
 
-    panic!("Unknown encoder name: {}", name);
+    #[test]
+    fn test_pickle_decoder() {
+
+    }
+
+    #[test]
+    #[should_panic(expected = "Unknown encoder name: unknown")]
+    fn test_unknown_decoder() {
+        create_encoder("unknown", None);
+    }
 }

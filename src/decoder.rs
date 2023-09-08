@@ -67,17 +67,12 @@ impl Decoder for PickleDecoder {
 }
 
 pub fn create_decoder(name: &str, schema: Option<&serde_json::Value>) -> Box<dyn Decoder> {
-    let n = name.to_lowercase();
-    if n == "avro" {
-        return Box::new(AvroDecoder::new(schema.unwrap()));
+    match name.to_lowercase().as_str() {
+        "avro" => Box::new(AvroDecoder::new(schema.unwrap())),
+        "pickle" => Box::new(PickleDecoder),
+        _ => panic!("Unknown decoder name: {}", name),
     }
-    if n == "pickle" {
-        return Box::new(PickleDecoder);
-    }
-
-    panic!("Unknown decoder name: {}", name);
 }
-
 
 
 #[cfg(test)]
