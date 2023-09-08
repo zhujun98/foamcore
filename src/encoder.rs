@@ -62,15 +62,7 @@ pub fn create_encoder(name: &str, schema: Option<&serde_json::Value>) -> Box<dyn
 mod tests {
     use crate::encoder::create_encoder;
 
-    #[test]
-    fn test_avro_decoder() {
-
-    }
-
-    #[test]
-    fn test_pickle_decoder() {
-
-    }
+    // see unittest in decoder.rs
 
     #[test]
     #[should_panic(expected = "Unknown encoder name: unknown")]

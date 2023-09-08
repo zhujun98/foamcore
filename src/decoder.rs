@@ -77,16 +77,68 @@ pub fn create_decoder(name: &str, schema: Option<&serde_json::Value>) -> Box<dyn
 
 #[cfg(test)]
 mod tests {
-    use crate::decoder::create_decoder;
+    use apache_avro::types::Value;
+
+    use crate::decoder::{create_decoder, Decoded};
+    use crate::encoder::create_encoder;
 
     #[test]
     fn test_avro_decoder() {
+        let raw_schema = r#"
+            {
+                "namespace": "testcase",
+                "type": "record",
+                "name": "raw",
+                "fields": [
+                    {
+                        "name": "integer",
+                        "type": "long"
+                    },
+                    {
+                        "name": "string",
+                        "type": "string"
+                    },
+                    {
+                        "name": "array2d",
+                        "type": {
+                            "type": "record",
+                            "logicalType": "ndarray",
+                            "name": "NDArray",
+                            "fields": [
+                                {"name": "shape", "type": {"items": "int", "type": "array"}},
+                                {"name": "dtype", "type": "string"},
+                                {"name": "data", "type": "bytes"}
+                            ]
+                        }
+                    }
 
+                ]
+            }"#;
+        let schema: serde_json::Value = serde_json::from_str(raw_schema).unwrap();
+        let encoder = create_encoder("avro", Some(&schema));
+        let decoder = create_decoder("avro", Some(&schema));
+
+        let raw = Decoded::from([
+            ("integer".to_string(), Value::Long(1)),
+            ("string".to_string(), Value::String("Hello world!".to_string())),
+            ("array2d".to_string(), Value::Record(
+                vec![
+                    ("shape".to_string(), Value::Array(vec![Value::Int(2), Value::Int(2)])),
+                    ("dtype".to_string(), Value::String(">f4".to_string())),
+                    ("data".to_string(), Value::Bytes(vec![1, 2, 3, 4].try_into().unwrap()))
+                ]
+            ))
+        ]);
+        let bytes = encoder.pack(&raw).unwrap();
+        let decoded = decoder.unpack(&bytes).unwrap();
+
+        assert_eq!(decoded.len(), 1);
+        assert_eq!(raw, decoded[0]);
     }
 
     #[test]
     fn test_pickle_decoder() {
-
+        let _ = create_decoder("pickle", None);
     }
 
     #[test]
