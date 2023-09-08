@@ -44,36 +44,83 @@ impl ZmqConsumer {
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
+    use std::sync::{Arc, Mutex};
 
-    // use std::thread;
+    use apache_avro::types::Value;
 
-    // struct ZmqProducer {
-    //     ctx: zmq::Context,
-    //     socket: zmq::Socket,
-    // }
-    //
-    // impl ZmqProducer {
-    //     pub fn new(endpoint: &str, sock_type: zmq::SocketType) -> Self {
-    //         let ctx = zmq::Context::new();
-    //         let socket = ctx.socket(sock_type).unwrap();
-    //
-    //         socket.bind(endpoint).unwrap();
-    //
-    //         ZmqProducer {
-    //             ctx,
-    //             socket,
-    //         }
-    //     }
-    //
-    //     pub fn start() {
-    //         thread::spawn(|| {
-    //
-    //         });
-    //     }
-    // }
+    use crate::encoder::{create_encoder, Encoder};
+    use crate::utils::Decoded;
+    use crate::zmq_consumer::ZmqConsumer;
+
+    struct ZmqProducer {
+        ctx: zmq::Context,
+        socket: Arc<Mutex<zmq::Socket>>,
+        encoder: Option<Box<dyn Encoder>>,
+    }
+
+    impl ZmqProducer {
+        pub fn new(endpoint: &str, sock_type: zmq::SocketType) -> Self {
+            let ctx = zmq::Context::new();
+            let socket = Arc::new(Mutex::new(ctx.socket(sock_type).unwrap()));
+
+            socket.lock().unwrap().bind(endpoint).unwrap();
+            ZmqProducer {
+                ctx,
+                socket,
+                encoder: None,
+            }
+        }
+
+        pub fn set_encoder(&mut self, name: &str, schema: Option<&serde_json::Value>) {
+            self.encoder = Some(create_encoder(name, schema));
+        }
+
+        pub fn start(&self) {
+            let socket = Arc::clone(&self.socket);
+
+            let mut records = Vec::new();
+            for i in 0..3 {
+                let data = Decoded::from([("index".to_string(), Value::Int(i))]);
+                let bytes = self.encoder.as_ref().unwrap().pack(&data).unwrap();
+                records.push(bytes);
+            }
+
+            thread::spawn(move|| {
+                for bytes in records {
+                    socket.lock().unwrap().send(&bytes, 0).unwrap();
+                }
+            });
+        }
+    }
 
     #[test]
     fn test_zmq_consumer() {
+        let raw_schema = r#"
+            {
+                "namespace": "testcase",
+                "type": "record",
+                "name": "raw",
+                "fields": [
+                    {
+                      "name": "index",
+                      "type": "int"
+                    }
+                ]
+            }"#;
+        let schema: serde_json::Value = serde_json::from_str(raw_schema).unwrap();
 
+        let mut producer = ZmqProducer::new("tcp://*:5555", zmq::SocketType::PUSH);
+        producer.set_encoder("avro", Some(&schema));
+
+        let mut consumer = ZmqConsumer::new("tcp://localhost:5555", zmq::SocketType::PULL);
+        consumer.set_decoder("avro", Some(&schema));
+
+        producer.start();
+        for i in 0..3 {
+            let ret = consumer.consume().unwrap();
+            assert_eq!(ret.len(), 1);
+            assert_eq!(ret[0], Decoded::from([("index".to_string(), Value::Int(i))]));
+        }
     }
 }
