@@ -7,16 +7,9 @@
  */
 use clap::Parser;
 
-mod decoder;
-mod encoder;
-mod redis_producer;
-mod schema_registry;
-mod utils;
-mod zmq_consumer;
-
-use crate::utils::load_schema;
-use crate::zmq_consumer::ZmqConsumer;
-use crate::redis_producer::RedisProducer;
+use foamcore::zmq_clients::ZmqConsumer;
+use foamcore::redis_clients::RedisProducer;
+use foamcore::schema::{SchemaRegistry, load_schema};
 
 #[derive(Parser)]
 struct Cli {
@@ -46,20 +39,22 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
-    let (schema, stream) = load_schema(&cli.schema_file);
-
     let zmq_socket = match cli.zmq_sock.to_ascii_lowercase().as_str() {
         "pull" => zmq::SocketType::PULL,
         "sub" => zmq::SocketType::SUB,
         _ => panic!("Unknown ZeroMQ socket type string: {:?}", cli.zmq_sock),
     };
 
+    let (json_schema, stream) = load_schema(&cli.schema_file);
+
     let mut consumer = ZmqConsumer::new(&cli.zmq_endpoint, zmq_socket);
-    consumer.set_decoder(&cli.decoder, Some(&schema));
+    consumer.set_decoder(&cli.decoder, json_schema.as_ref());
 
     let mut producer = RedisProducer::new(&cli.redis_host, cli.redis_port);
-    producer.set_encoder(&cli.encoder, Some(&schema));
-    producer.publish_schema(&stream, &schema);
+    producer.set_encoder(&cli.encoder, json_schema.as_ref());
+
+    let mut schema_registry = SchemaRegistry::new(&cli.redis_host, cli.redis_port);
+    schema_registry.set(&stream, json_schema.as_ref()).unwrap();
 
     loop {
         let decoded = match consumer.consume() {
@@ -67,7 +62,7 @@ fn main() {
             Err(e) => panic!("Error while consuming data: {:?}", e),
         };
 
-        let entries = producer.produce(&stream, &decoded, 10);
+        let entries = producer.produce(&[decoded], &stream);
 
         for entry in entries {
             match entry {

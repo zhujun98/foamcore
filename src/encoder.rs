@@ -5,17 +5,18 @@
  *
  * Author: Jun Zhu
  */
-use apache_avro::{Writer, Schema};
+use apache_avro::Writer;
 use apache_avro::types::{Record};
 
-use crate::utils::{json_to_avro_schema, Encoded, Decoded, FcResult};
+use crate::schema::{Encoded, Decoded, json_to_avro_schema};
+use crate::error::{FcResult};
 
 pub trait Encoder {
     fn pack(&self, data: &Decoded) -> FcResult<Encoded>;
 }
 
 pub struct AvroEncoder {
-    schema: Schema,
+    schema: apache_avro::Schema,
 }
 
 impl AvroEncoder {
@@ -50,10 +51,13 @@ impl Encoder for PickleEncoder {
     }
 }
 
-pub fn create_encoder(name: &str, schema: Option<&serde_json::Value>) -> Box<dyn Encoder> {
+pub fn create_encoder(name: &str, schema: Option<&serde_json::Value>) -> Box<dyn Encoder + Send> {
     match name.to_lowercase().as_str() {
         "avro" => Box::new(AvroEncoder::new(schema.unwrap())),
-        "pickle" => Box::new(PickleEncoder),
+        "pickle" => {
+            assert!(schema.is_none());
+            Box::new(PickleEncoder)
+        },
         _ => panic!("Unknown encoder name: {}", name),
     }
 }
@@ -66,7 +70,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Unknown encoder name: unknown")]
-    fn test_unknown_decoder() {
+    fn test_unknown_encoder() {
         create_encoder("unknown", None);
     }
 }
