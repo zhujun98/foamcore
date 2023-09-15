@@ -1,0 +1,29 @@
+{
+  "namespace": "schema1",
+  "type": "record",
+  "name": "raw",
+  "fields": [
+    {
+      "name": "integer",
+      "type": "long"
+    },
+    {
+      "name": "string",
+      "type": "string"
+    },
+    {
+      "name": "array2d",
+      "type": {
+        "type": "record",
+        "logicalType": "ndarray",
+        "name": "NDArray",
+        "fields": [
+          {"name": "shape", "type": {"items": "int", "type": "array"}},
+          {"name": "dtype", "type": "string"},
+          {"name": "data", "type": "bytes"}
+        ]
+      }
+    }
+
+  ]
+}
