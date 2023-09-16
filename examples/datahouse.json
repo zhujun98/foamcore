@@ -1,14 +1,18 @@
 {
-  "namespace": "debye",
+  "namespace": "datahouse",
   "type": "record",
   "name": "raw",
   "fields": [
     {
-      "name": "index",
-      "type": "long"
+      "name": "name",
+      "type": "string"
     },
     {
-      "name": "encoder",
+      "name": "age",
+      "type": "int"
+    },
+    {
+      "name": "stress",
       "type": {
         "type": "record",
         "logicalType": "ndarray",
@@ -19,10 +23,6 @@
           {"name": "data", "type": "bytes"}
         ]
       }
-    },
-    {
-      "name": "samples",
-      "type": "debye.NDArray"
     }
   ]
 }

@@ -1,5 +1,4 @@
-foamcore
-========
+# foamcore
 
 ![Build status](https://github.com/zhujun98/foamcore/actions/workflows/rust.yml/badge.svg)
 
@@ -18,5 +17,6 @@ cargo install --path .
 ## Getting started
 
 ```shell
-foamcore schemas/debye.json
+cd examples
+foamcore datahouse.json
 ```
